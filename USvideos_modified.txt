@@ -1,0 +1,115 @@
+﻿1. Title: Trending YouTube Video Statistics
+
+
+2. Sources
+   Original dataset was adopted from below URL : 
+	https://www.kaggle.com/datasnaek/youtube-new
+   That data was collected for several countries : US(United states of America), GB(Great Britain), DE(Germany), CA(Canada), and FR(France).
+   I chose the data for USA country only.
+   I modified the dataset to analyze some hidden information.
+   Such as, I removed duplicate video_id's and make use of them to retrieve some meaningful data.
+   I removed some unrelated attributes.As per my requirement,I changed type/class of few attributes too.
+   I derived some new attributes from existing once.And many other minor modifications.
+   
+   All the modifications are done by R-Programming.
+   
+   I also added a new feature called "subscriber" to the dataset.
+   I collected all subscriber information from youtube.com ,process was automatically done by a python script,written by me. 
+   
+3. Past Usage:
+
+   Please see here : https://www.kaggle.com/datasnaek/youtube-new
+ 
+ 
+4. Relevant Information:
+   YouTube (the world-famous video sharing website) maintains a list of the top trending videos on the platform.
+   According to Variety magazine, To determine the year's top-trending videos, YouTube uses a combination of 
+   factors including measuring users interactions (number of views, shares, comments and likes).Note that they’re not the most-viewed videos overall for the calendar year.
+   
+   This dataset is the daily record from the top trending YouTube videos. Top 200 trending videos of a given day.
+   
+   Original Data was collected during 14th November 2017 & 5th March 2018(though, data for January 10th & 11th of 2017 is missing)
+   Original dataset was collected by Youtube API.
+   
+   Subscriber column data scrapped by me on 13th March of 2018, through a automated python script.
+   NA introduced in the column for videos those are removed by the Youtube due to copyright or other issue.
+   
+   
+5. Number of Instances: 4547
+
+
+6. Number of Attributes: 18+ attribute
+  
+   18 independent variables & 5 dependent variables
+   
+   
+7. Attribute information:
+
+   1 - video_id (class : factor , it could be used as a character)
+   2 - last_trending_date (class : factor , it could be used as a date)
+   3 - publish_date (class : factor , it could be used as a date)
+   4 - publish_hour (class : factor , it could be used as a integer)
+   5 - category_id (class : factor , it could be used as a integer)
+   6 - channel_title (class : factor , it could be used as a character)
+   7 - views (class : integer)
+   8 - likes (class : integer)
+   9 - dislikes (class : integer)
+   10 - comment_count (class : integer)
+   11 - comments_disabled (class : factor , it could be used as a logical)
+   12 - ratings_disabled (class : factor , it could be used as a logical)
+   13 - tag_appeared_in_title_count (class : integer)
+   14 - tag_appeared_in_title (class : logical)
+   15 - title (class : factor , it could be used as a character)
+   16 - tags (class : factor , it could be used as a character)
+   17 - description (class : factor , it could be used as a character)
+   18 - trend_day_count (class : integer)
+   19 - trend.publish.diff (class : integer)
+   20 - trend_tag_highest (class : integer)
+   21 - trend_tag_total (class : integer)
+   22 - tags_count (class : numeric)
+   23 - subscriber (class : integer)
+   
+8. Missing Attribute Values: None
+   Column name "description" has blank values for 93 rows.
+   Column name "tags" has NA for 208 rows.
+   Column name "subscriber" has NA for 22 rows.
+   
+9. Description of attributes:
+
+   1 - video_id : Single unique attribute of the entire dataset. It represents unique video id of an uploaded video on Youtube database.
+   2 - last_trending_date : It represents the last date, when video was last time appeared on Youtube trending video list.
+   3 - publish_date : It represents the date, when video was uploaded or published on Youtube site.
+		This attribute derived from the "publish_time" attribute of the original dataset.
+   4 - publish_hour :It represents the hour, when video was uploaded or published on Youtube site.
+		This attribute also derived from the "publish_time" attribute of the original dataset.
+   5 - category_id : It represents the unique category id from the Youtube database, where video was uploaded/published.
+   6 - channel_title : It represents the channel name of author/publisher on Youtube. 
+   7 - views : It represents how many times video was viewed by Youtube users. 
+   8 - likes : It represents the how many time's video was liked by other Youtube users. 
+   9 - dislikes : It represents the how many time's video was disliked by other Youtube users. 
+   10 - comment_count : It represents the how many time's Youtube users(including publisher) started a conversation on the video. 
+   11 - comments_disabled : It represents whether video author/owner allows others to start a conversation on the video.
+   12 - ratings_disabled : It represents whether video author/owner allowed other users to like or dislike the video content.
+   13 - tag_appeared_in_title_count : It represents how many number of times, a Youtube video title containing one if its own tag.
+		This attribute derived from "title" & "tags" attribute of the original dataset.
+		Its vale could be 0.
+   14 - tag_appeared_in_title : It represents ,whether a Youtube video title containing one of its tags.It would be a useful parameter of SEO(Search Engine Optimization).
+		This attribute derived from "tag_appeared_in_title_count" attribute of the modified dataset.
+   15 - title : It represents the title/name of the Youtube video.It was given by the author of the video.It could not be empty.
+   16 - tags : It represents the list of tag publisher attached on the video.Each tag separated by '|' .Tags are functioning like keyword in Youtube.
+		Tags are attached by the publisher of the video.It is optional,so tags could be undefined or NA.
+   17 - description : It describes the content of the Youtube video.It was given by the author of the video.It is optional,so it could be empty/blank.
+   18 - trend_day_count : It represents a number ,which described how many times/days ,the video appeared on the Youtube trending video list.
+		The value is calculated through "video_id" attribute of the original dataset.
+   19 - trend.publish.diff : It represents a number ,which describes the day difference between video publishing date & video trending date(for 1st time).
+		The value is calculated through "trending_date" , "publish_date" attribute of the original dataset.
+   20 - trend_tag_highest : Maximum number of times all trending videos used one of the tag,which is used on the video.
+		This attribute is calculated through "tag" attribute of the dataset.
+   21 - trend_tag_total : Total number of times all trending videos used any of the tag,which are used for the video.
+		Remember : "tags" field on the Youtube could contain multiple tags, separated by "|" .
+		This attribute is also calculated through "tag" attribute of the dataset.
+   22 - tags_count : It represent how many tags are attached to the video. Remember a video author can add multiple tags separated by '|' .
+		This attribute is also calculated through "tag" attribute of the dataset.
+   23 - subscriber : It represent how many Youtube users(except video Author) subscribed to the video channel to get notifications about any channel updates.
+		So greater the number , there is a higher chance of getting more views,likes,comments,etc for channel videos.
+		
