@@ -1,0 +1,1584 @@
+Youtube Trend Exploration by Soumya Ghosh
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# Load all of the packages that you end up using in your analysis in this code
+# chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk. This
+# prevents the code from displaying in the knitted HTML output. You should set
+# echo=FALSE for all code chunks in your file, unless it makes sense for your
+# report to show the code that generated a particular plot.
+
+# The other parameters for "message" and "warning" should also be set to FALSE
+# for other code chunks once you have verified that each plot comes out as you
+# want it to. This will clean up the flow of your report.
+
+library(ggplot2)
+library(knitr)
+library(dplyr)
+library(GGally)
+library(lubridate)
+library(gridExtra)
+library(psych)
+library(memisc)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+YtUsa <- read.csv("USvideos_modified.csv")
+
+```
+
+This report explores a dataset containing video id,views count,number of 
+likes,subscriber and other attributes for approximately 4,600 Youtube 
+Trending videos.
+
+
+# Univariate Plots Section
+
+
+```{r echo=FALSE, Univariate_Plots}
+dim(YtUsa)
+
+```
+
+```{r echo=FALSE}
+#converting class of 2 columns
+YtUsa$publish_hour <- factor(YtUsa$publish_hour)
+YtUsa$category_id <- factor(YtUsa$category_id)
+str(YtUsa)
+```
+
+```{r echo=FALSE}
+summary(YtUsa)
+```
+
+Our dataset consists of 23 variables, with 4547 observations.
+
+[Notice - I would create a new variable at Bivariate Plots Section.]
+
+```{r echo=FALSE}
+as.Date(YtUsa$last_trending_date[dim(YtUsa)[1]]) - 
+  as.Date(YtUsa$last_trending_date[1])
+```
+
+So there are total 105 days of observation for Youtube trending videos.
+
+```{r echo=FALSE}
+ggplot(aes(x=publish_hour),data=YtUsa)+geom_bar()
+```
+
+I can see peak hour for publishing a trending video in Youtube in between 
+14:00 to 18:00 in USA timezone.
+Though it might be the case, that all videos are published during this hour,
+not only trending ones.
+
+```{r echo=FALSE}
+ggplot(aes(x=category_id),data=YtUsa)+geom_bar()
+```
+
+Youtube category wise distribution.
+
+```{r echo=FALSE}
+table(YtUsa$category_id)
+```
+
+It can be clearly seen ,category_id = 24 is the category where highest 
+number(1102) of Youtube trending videos were published.
+
+```{r echo=FALSE}
+ggplot(aes(subscriber),data=YtUsa[!is.na(YtUsa$subscriber),])+
+  geom_histogram(binwidth=1000000)+scale_x_continuous(
+    breaks=seq(0,1000000000,5000000))+
+  ggtitle("Distribution of Subscribers")+labs(caption="bin width = 1000000")
+```
+
+```{r echo=FALSE}
+summary(YtUsa$subscriber)
+```
+
+There are 22 trending video where subscriber information set to NA.
+
+```{r echo=FALSE}
+ggplot(aes(tags_count),data=YtUsa)+geom_histogram(binwidth=1)
+```
+
+```{r echo=FALSE}
+table(YtUsa$tags_count)
+```
+
+We can see , there are 208 videos which are not using any tag.
+
+```{r}
+#by which.max() trying to find the index of maximum value of the table 
+# generated from 'tags_count' column.And then using that index,find out the 
+# table content.So generally that will be the mode of the column & frequency.
+
+table(YtUsa$tags_count)[which.max(table(YtUsa$tags_count))]
+```
+
+
+mode of tags_count is 0.
+
+```{r echo=FALSE}
+median(YtUsa$tags_count)
+```
+
+
+Median tags_count is 18.
+
+```{r echo=FALSE}
+ggplot(aes(x=tag_appeared_in_title_count),data=YtUsa)+
+  geom_histogram(binwidth = 1)+scale_x_continuous(breaks = seq(0,18,1))
+```
+
+```{r echo=FALSE}
+summary(YtUsa$tag_appeared_in_title_count)
+```
+
+From the Histogram & the summary ,we can see, Q3-Q1=68% of the Youtube 
+trending videos are using 1 to 4 tags those are also appeared in the 
+video title.
+
+```{r echo=FALSE}
+summary(YtUsa$tag_appeared_in_title)
+```
+
+Out of 4547 trending videos , 701 video title had not used any of its tag
+(or keyword) on the video title.
+
+```{r echo=FALSE}
+ggplot(aes(x=trend_day_count),data=YtUsa)+geom_histogram(binwidth = 1)
+```
+```{r echo=FALSE}
+summary(YtUsa$trend_day_count)
+```
+
+
+```{r echo=FALSE}
+table(YtUsa$trend_day_count)
+```
+
+From 105 days of observation , it can be seen ,that a particular video 
+trended for 14 days at most.
+
+We can see there are 604 videos those had appeared in the Youtube trending 
+video list for only once.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x=comment_count),data=YtUsa)+
+  geom_histogram()+scale_x_continuous(lim = c(0,10000))+
+  ggtitle("comment_count distribution upto 10000")
+```
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(x=comment_count+1),data=YtUsa)+geom_histogram()+scale_x_log10()+
+  labs(caption = "scale_x_log10()")
+```
+
+Long tailed distribution transformed for better understanding of the comment
+counts.
+Since we are using log10 transformation on x-axis for comment_count, we have
+to apply comment_count+1 to overcome Infinite values.
+
+
+```{r echo=FALSE}
+summary(YtUsa$comments_disabled)
+```
+
+There are only 76 videos where comments_disabled variable set to True.
+
+```{r echo=FALSE,message=FALSE}
+ggplot(aes(x=trend.publish.diff+1),data=YtUsa)+geom_histogram()+
+  scale_x_log10(breaks=c(1:7,14,90,30,365,1000,4215))+
+  ggtitle("Distribution of difference between video publishing date & video 
+          trending date(1st time)")+
+  labs(caption = "scale_x_log10() ; video trending date(1st time) - video 
+       publish date")
+```
+
+We can see,maximum number of Youtube videos are listed on trending, within 0
+to 14 days of the video publishing date.
+
+```{r echo=FALSE}
+ggplot(aes(x=as.Date(last_trending_date)),data=YtUsa)+geom_bar()+
+  scale_x_date()+labs(caption = "scale_x_date()")
+```
+
+2 days trending data are missing in mid January.
+
+```{r echo=FALSE, message=FALSE}
+plt1 <- ggplot(aes(x=trend_tag_highest),data=subset(YtUsa,!is.na(tags)))+
+  geom_histogram()
+plt2 <- ggplot(aes(x=trend_tag_total),data=subset(YtUsa,!is.na(tags)))+
+  geom_histogram()
+grid.arrange(plt1,plt2)
+```
+
+We can clearly see ,there is multi-modal distribution over trend_tag_highest.
+And trend_tag_total distribution is long tailed positively(right) skewed.
+Both of them are under non-symmetric distribution.
+
+```{r echo=FALSE, message=FALSE}
+plt3 <- ggplot(aes(x=trend_tag_highest),data=subset(YtUsa,!is.na(tags)))+
+  geom_histogram()+scale_x_log10()+labs(caption = "scale_x_log10()")
+plt4 <- ggplot(aes(x=trend_tag_total),data=subset(YtUsa,!is.na(tags)))+
+  geom_histogram()+scale_x_log10()+labs(caption = "scale_x_log10()")
+grid.arrange(plt3,plt4)
+```
+
+log10() applied on both of the x scale.
+
+
+Now I am plotting distribution of some key features of the dataset with 
+log10 transformation.
+
+```{r fig.width=9, fig.height=15 ,echo=FALSE, message=FALSE}
+plot1 <- ggplot(aes(views),data=YtUsa)+geom_histogram()+scale_x_log10()+
+  ggtitle("Distribution of views scaled to log10")
+plot2 <- ggplot(aes(likes+1),data=YtUsa)+geom_histogram()+scale_x_log10()+
+  ggtitle("Distribution of likes scaled to log10")
+plot3 <- ggplot(aes(dislikes+1),data=YtUsa)+geom_histogram()+scale_x_log10()+
+  ggtitle("Distribution of dislikes scaled to log10")
+plot4 <- ggplot(aes(subscriber+1),data=subset(YtUsa,!is.na(subscriber)))+
+  geom_histogram()+scale_x_log10()+
+  ggtitle("Distribution of subscribers scaled to log10")
+grid.arrange(plot1,plot2,plot3,plot4,ncol=1)
+```
+
+
+
+# Univariate Analysis
+
+
+### What is the structure of your dataset?
+
+There are 4,547 unique video ids(observations) in the dataset with 23 
+features.15 of them are independent feature & rest of them are dependent
+feature."video_id" is the unique feature of the dataset.
+
+Trending report recorded for 105 days.
+Category id 24 is the most used category for trending videos.
+1,102 of 4,547 videos were published under that category.
+From 105 days of observation ,we observed that no video repeated(re-trended) 
+on trending list for more than 14 times.
+It is also observed that most of the videos get listed on Youtube trending 
+list within 0 to 14 days of video publishing date.
+84% or more trending videos are using one of its tag on the video title for 
+at least once. 
+
+The Median views for a Youtube trending video = 318840.
+The Median comment count for a Youtube trending video = 854.
+Maximum number of dislikes a Youtube trending video got 1674420.
+The Median subscriber count for a Youtube trending video = 1198769.
+208 trading videos did not include any tag on the video.
+604 videos were trended for only once, means those video were never 
+re-trended within 105 days of period.
+
+
+### What is/are the main feature(s) of interest in your dataset?
+
+Main features in the dataset are: views,comment_count,likes,dislikes & 
+subscriber.
+I like to determine which features are best for predicting the views of a 
+Youtube trending video.
+I suspect comment_count,likes,dislikes,subscriber and some combination of the
+other features could be used to build a predictive model to determine views 
+count of a Youtube trending video.
+
+
+### What other features in the dataset do you think will help support your 
+#     investigation into your feature(s) of interest?
+
+Other features in the dataset are : 
+category_id,
+tag_appeared_in_title,
+trend_tag_highest(Maximum number of times all trending videos used one of the 
+tag,which is used on the video),
+trend_tag_total(Total number of times all trending videos used any of the tag
+,which are used for the video),
+trend_day_count(Number of times a video listed on Youtube Trend).
+
+
+### Did you create any new variables from existing variables in the dataset?
+
+Yes ,I created 5 new variables those could be derived from the dataset,
+names are :
+tag_appeared_in_title_count,tag_appeared_in_title,trend_tag_highest,
+trend_tag_total,tags_count.
+
+
+### Of the features you investigated, were there any unusual distributions?
+#     Did you perform any operations on the data to tidy, adjust,or change 
+#     the form of the data? If so, why did you do this?
+
+When I investigate ,I found only 76 observations, where comments_disabled 
+feature is enabled.
+Also found only 25 observations with ratings_disabled feature enabled.
+These numbers are very low in respect of total number of observations.
+I think ,those two are important features of the dataset ,but due to lack of
+their availability,we would not be confident to make any assumption based 
+upon them.
+
+Yes I performed operations on the original dataset to make it tidy.So this 
+dateset is modified version of the original one.
+In original dataset there were multiple observation for same video_id .
+That original dataset could be used for observation as a time series,
+but as you could see from the feature "trend_day_count" ,not all video_id(s) 
+were repeated in Youtube trending. Therefore time series not available for 
+every video.
+So for that case, I had to filter trend_day_count > 1 & that would remove 604 
+trending videos.
+But for this project ,I liked to observe each & every trending videos.
+
+
+
+# Bivariate Plots Section
+
+```{r echo=FALSE ,fig.width= 15,fig.height=9, Bivariate_Plots}
+
+pairs(YtUsa[,c(4:5,7:12,14,18:23)],bg=c("yellow","blue"), pch = 21)
+
+```
+
+```{r echo=FALSE,fig.width= 15,fig.height=9}
+
+pairs.panels(YtUsa[,c(4:5,7:12,14,18:23)],method = "pearson",hist.col = 
+               "#00AFBB",density = TRUE,ellipses = TRUE)
+
+```
+
+One of the interesting point I would like to share,correlation between likes 
+& comment_count = 0.71 .
+And correlation between dislikes & comment_count = 0.83 .
+So we can claim, that more people involved in conversation when they were 
+disliking a video rather than liking a video.
+Most of these cases ,video might be controversial or a fake news,etc.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=likes+1),data=YtUsa)+geom_jitter(alpha=0.25,size=3/4)+
+  scale_x_log10(breaks=c(1,100,1000,10000,100000,1000000))+scale_y_log10()+
+  xlab("likes")+labs(caption="scale_x_log10()+scale_y_log10()")+
+  ggtitle("Views v/s Likes+1 with log10 transformation for both axes")+
+  geom_smooth()
+```
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,likes))
+```
+ 
+From the above plot we can see, there is a very strong relationship between 
+views & likes.
+And the value of the correlation between them is 0.82.
+
+Since log10 applied on the x-axis & and there are few videos in Youtube 
+trending list with 0 likes, thats why we have to pass the variable (likes+1) 
+instead of likes into the scale_x_log10() function. That would help to 
+overcome infinite values(since log10(0) = Inf).
+
+Therefore in the above plot on x-axis scale 1 represent 0.
+
+We can see there are many outliers on y-axis for x = 1.
+Many of those video authors might be disabled video rating ,so users can't 
+like or dislike the video.
+
+Another point to see,after 10^4=10000 likes ,variance of likes decreases as 
+views increases.
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=dislikes+1),data=YtUsa)+
+  geom_jitter(alpha=0.25,size=3/4)+scale_x_log10(
+    breaks=c(1,100,1000,10000,100000))+scale_y_log10()+
+  labs(caption="scale_x_log10()+scale_y_log10()")+
+  ggtitle("Views v/s Dislikes+1 with log10 transformation for both axes")
+```
+
+Plot almost looks similar to views v/s likes plot, but in this case ,variance
+of dislikes is bigger for some places.
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,dislikes))
+```
+
+Correlation between views & dislikes =  0.53 .
+
+```{r echo=FALSE}
+# Finding correaltion between views & (likes/dislikes)
+# In the dataset, there are few data points with likes=0 & dislikes=0
+#  and that would cause Inf, so we need to subset the dataset, by extracting 
+#  those data points.
+with(subset(YtUsa,likes !=0 & dislikes != 0),cor(views,likes/dislikes))
+```
+
+Correlation between views and ratio of the likes & dislikes is very weak.
+
+```{r echo=FALSE}
+with(subset(YtUsa,likes !=0 & comment_count != 0),cor(likes,comment_count))
+```
+
+Correlation between views and comment_count is vey strong.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=nchar(as.character(description))),data=YtUsa)+
+  geom_point(alpha=0.1,position = "jitter")+
+  coord_cartesian(xlim=c(quantile(
+    nchar(as.character(YtUsa$description)),0.0),quantile(
+      nchar(as.character(YtUsa$description)),0.95)),
+    ylim=c(quantile(YtUsa$views,0.0),quantile(YtUsa$views,0.95)))+
+  geom_smooth()+scale_y_log10(breaks=c(1,100000,300000,1000000))+
+  labs(caption = "scale_y_log10()")+
+  ggtitle("views v/s description length relation")+
+  xlab("description length")
+```
+
+Trending videos with less than 500 video description length has lower 
+mean(average) views count than others. 
+[Please see - we observed top 95% CI]
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=nchar(as.character(title))),data=YtUsa)+
+  geom_point(alpha=0.05)+scale_y_log10(breaks=c(
+    1,100000,200000,300000,1000000))+geom_smooth()+
+  labs(caption = "scale_y_log10()")+
+  ggtitle("views v/s title length relation")+xlab("title length")
+```
+
+From the above plot,linear regression line represents,as the average length 
+of video titles are increasing, average views counts are slightly decreasing.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=tag_appeared_in_title_count),data=YtUsa)+
+  geom_point(alpha=0.1,position = "jitter")+coord_cartesian(xlim=c(quantile(
+    YtUsa$tag_appeared_in_title_count,0.025),quantile(
+      YtUsa$tag_appeared_in_title_count,0.975)),ylim=c(quantile(
+        YtUsa$views,0.025),quantile(YtUsa$views,0.975)))+geom_smooth()+
+  scale_y_log10(breaks=c(0,100000,200000,500000,1000000,10000000))+
+  labs(caption = "scale_y_log10()")
+```
+
+tag_appeared_in_title_count not much effecting count of views.
+[Please see - we observed 2-tailed 95% CI]
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,tag_appeared_in_title_count))
+```
+
+As like expected correlation between views & tag_appeared_in_title_count = 
+0.02,which is very weak.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=trend_day_count),data=YtUsa)+
+  geom_point(position ="jitter",alpha=.1)+coord_cartesian(xlim=c(0,quantile(
+    YtUsa$trend_day_count,0.95)),ylim=c(0,quantile(YtUsa$views,0.95)))+
+  geom_smooth()
+```
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,trend_day_count))
+```
+
+For top 95% of the views counts & trend_day_count data, we can say ,as mean 
+trend_day_count are increasing mean views counts are increasing rapidly.
+
+Correlation between views & trend_day_count = 0.19 
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,trend_day_count,method = "spearman"))
+```
+
+Rank correlation(method="spearman") between views & trend_day_count is 
+0.3594205
+
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=as.numeric(category_id)),data=YtUsa)+
+  geom_jitter(alpha=0.25,color="orange")+coord_cartesian(ylim=c(0,quantile(
+    YtUsa$views,0.95)))+geom_smooth()+
+labs(caption="smoothing attempted after converting category_id from factor 
+to numeric") 
+```
+
+Video category_id related with views counts.
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,as.numeric(category_id),method = "pearson"))
+```
+
+And the value of correlation is -0.116636 (-0.12)
+
+```{r}
+# Finding correlation between views & category_id only for top 95% CI of 
+#   views
+# Since class of category_id is factor, we need to change it to numeric for
+#   correlation calculation.
+
+with(subset(YtUsa,views >= quantile(views,0.0) & views <= 
+              quantile(views,0.95)),cor(views,as.numeric(category_id)))
+```
+
+Correlation between top 95% of views & category_id = -0.1038592
+
+
+To make more sense about categorical distribution,lets create a new variable 
+called "subscriber_by_category",which will represent 3 groups of data.
+
+low : group of all categort_id's those have small(<=7552015) number of 
+subscribers.
+medium : group of all categort_id's those have moderate(from 7552016 to 
+18185017) number of subscribers.
+high : group of all categort_id's those have huge(>18185017) number of 
+subscribers.
+
+Here, low < medium < high
+
+```{r}
+# remember subscriber have NA's, so we need to use a subset of the dataset.
+# group by category_id
+
+cat_groups <- group_by(subset(YtUsa,!is.na(subscriber)),category_id)
+YtUsa.subs_by_cat <- summarise(cat_groups,subs_max = max(subscriber),n=n())
+YtUsa.subs_by_cat <- arrange(YtUsa.subs_by_cat,subs_max)
+
+#Here YtUsa.subs_by_cat is a new data.frame containing 3 columns:
+# category_id,subs_max,n
+
+#subs_max would represent the highest subscriber of a video channel for that
+# Youtube category_id
+#n represent number of Youtube trending videos are present in the category.
+```
+
+
+```{r}
+YtUsa$subscriber_by_category <- NA # new variable created & NA assigned to 
+# its all values.
+
+#now assigning new values from YtUsa.subs_by_cat DataFrame as per conditions
+
+YtUsa[YtUsa$category_id %in% 
+        YtUsa.subs_by_cat[YtUsa.subs_by_cat$subs_max<=7552015,]
+      $category_id,]$subscriber_by_category <- "low"
+
+YtUsa[YtUsa$category_id %in% 
+        YtUsa.subs_by_cat[YtUsa.subs_by_cat$subs_max> 7552015 & 
+                            YtUsa.subs_by_cat$subs_max<=18185017,]
+      $category_id,]$subscriber_by_category <- "medium"
+
+YtUsa[YtUsa$category_id %in% 
+        YtUsa.subs_by_cat[YtUsa.subs_by_cat$subs_max>18185017,]
+      $category_id,]$subscriber_by_category <- "high"
+
+# change variable class to factor
+YtUsa$subscriber_by_category <- factor(YtUsa$subscriber_by_category)
+
+# ordered to low < medium < high
+YtUsa$subscriber_by_category <- 
+  ordered(YtUsa$subscriber_by_category,levels=c(
+    levels(YtUsa$subscriber_by_category)[2:3],
+    levels(YtUsa$subscriber_by_category)[1]))
+```
+
+
+```{r}
+#To calculate cor, variables must be numeric, that's why, converting  
+# subscriber_by_category low,medium,high to numeric 1,2,3.
+
+with(YtUsa,cor(views,as.numeric(subscriber_by_category)))
+```
+
+correlation in between views & subscriber_by_category = 0.10
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=subscriber_by_category),data=YtUsa)+
+  geom_point(position ="jitter",alpha=0.1)+scale_y_sqrt()+
+  labs(caption="scale_y_sqrt()")
+```
+
+So categories with greater level of subscribers have more chance of getting 
+more Youtube viewers.
+
+```{r echo=FALSE}
+by(YtUsa$views,YtUsa$subscriber_by_category,summary)
+```
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=subscriber_by_category),data=YtUsa)+
+  geom_boxplot()+scale_y_log10(breaks=c(
+    10000,33768,144773,287705,406864,1315056))+
+  labs(caption="scale_y_log10()")
+```
+
+It can be seen that  1st Quantile, Median & 3rd Quantile views counts are 
+highly affected by the 'subscriber_by_category' feature.
+
+```{r echo=FALSE}
+ggplot(aes(x=likes,y=dislikes),data=subset(YtUsa,likes!=0 & dislikes!=0))+
+  geom_point(alpha=0.1)+scale_x_log10()+scale_y_log10()+
+  geom_smooth(method="lm")+labs(caption="scale_x_log10()+scale_y_log10()")
+```
+
+```{r echo=FALSE}
+with(YtUsa,cor(likes,dislikes,method = "pearson"))
+```
+
+Likes & Dislike has a strong relationship with correlation value of 0.46
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=comment_count+1),data=YtUsa)+geom_point(alpha=.1)+
+  scale_x_log10(breaks=c(1,10,100,100000,1000000))+
+  scale_y_log10(breaks=c(500,1000,10000,100000,1000000,10000000,100000000))+
+  geom_smooth()+labs(caption = "scale_x_log10() & scale_y_log10()")
+```
+
+```{r echo=FALSE}
+with(YtUsa,cor.test(views,comment_count))
+```
+
+Correlation(method=pearson) between views & comment_count is very strong & 
+its value is 0.5733848
+
+```{r echo=FALSE ,warning=FALSE}
+with(YtUsa,cor.test(views,comment_count,method = "spearman"))
+```
+
+rho is a nonparametric measure of rank correlation.
+rho between views & comment_count is very strong too.And its value is 
+0.8252309 
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=trend_tag_highest),data=YtUsa)+geom_point(alpha=.1)+
+  scale_y_log10()+geom_smooth()+labs(caption = "scale_y_log10()")
+```
+
+Regression Line for views v/s trend_tag_highest is monotonic here.
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,trend_tag_highest))
+```
+
+And correlation between views & trend_tag_highest is -0.013 here.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=trend_tag_total),data=YtUsa)+geom_point(alpha=.1)+
+  scale_y_log10()+geom_smooth()+labs(caption = "scale_y_log10()")
+```
+
+```{r echo=FALSE}
+with(YtUsa,cor(views,trend_tag_total))
+```
+
+Relationship between views & trend_tag_total is non linear.
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=factor(trend_day_count)),data=YtUsa)+geom_boxplot()+
+  scale_y_log10()+
+  labs(caption = "scale_y_log10() applied.And trend_day_count converted to 
+       factor for categorizing")
+```
+
+Now Boxplots for views v/s trend_day_count for 2 tailed 95% CI :-
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=factor(trend_day_count)),data=YtUsa)+geom_boxplot()+
+  coord_cartesian(ylim=c(quantile(YtUsa$views,.025),quantile(
+    YtUsa$views,.975)))+scale_y_log10()+labs(caption = "scale_y_log10()")
+```
+
+```{r echo=FALSE}
+by(YtUsa$views,YtUsa$trend_day_count,summary)
+```
+
+Median views count for trend_day_count : 1  = 163307 .
+Median views count for trend_day_count : 14  = 17540613 .
+And 17540613 >> 163307 .
+So if a video get listed more times on Youtube trending,its median views 
+count is way more bigger(for maximum cases).
+
+
+```{r echo=FALSE}
+ggplot(aes(y=likes+1,x=subscriber_by_category),data=YtUsa)+
+  geom_boxplot()+scale_y_log10(breaks=c(
+    500,1011,8843,20000,33120))+
+  labs(caption="scale_y_log10()")
+```
+
+```{r echo=FALSE}
+with(YtUsa,by(likes,subscriber_by_category,summary))
+```
+
+Median likes count for low group of 'subscriber_by_category' is far lower 
+than the median likes count for medium & high.  
+
+```{r echo=FALSE}
+ggplot(aes(subscriber_by_category,subscriber),
+       data=YtUsa[!is.na(YtUsa$subscriber),])+
+  geom_jitter(alpha=0.25,color="green",size=2)+
+  labs(caption="x -> median\n + -> mean")+
+  ggtitle("Subscriber v/s subscriber_by_category")+
+  stat_summary(fun.y=median,geom="point",shape=4)+
+  stat_summary(fun.y=mean,geom="point",shape=3)
+```
+
+
+```{r echo=FALSE}
+with(YtUsa,by(subscriber,subscriber_by_category,summary))
+```
+
+Median subscriber for subscriber_by_category: low = 599310 .
+Median subscriber for subscriber_by_category: medium = 1099202 .
+Median subscriber for subscriber_by_category: high = 1759496 .
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=tag_appeared_in_title),data=YtUsa)+geom_boxplot()+
+  scale_y_log10()+labs(caption = "scale_y_log10()")
+```
+
+Boxplots for views v/s tag_appeared_in_title for 2 tailed 95% CI shown below:
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=tag_appeared_in_title),data=YtUsa)+geom_boxplot()+
+  coord_cartesian(ylim=c(quantile(YtUsa$views,.025),quantile(
+    YtUsa$views,.975)))+
+  scale_y_log10(breaks=c(53227,100000,247049,333984,1042283))+
+  labs(caption = "scale_y_log10()")
+```
+
+```{r echo=FALSE}
+by(YtUsa$views,YtUsa$tag_appeared_in_title,summary)
+```
+
+Median views Value for not tag_appeared_in_title = 247049 .
+Median views Value for tag_appeared_in_title = 333984
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(x=views),data=YtUsa)+geom_histogram()+scale_x_log10()+
+  facet_wrap(~tag_appeared_in_title)+
+ggtitle("distribution of views in respect of tag_appeared_in_title or not")+
+  labs(caption = "scale_x_log10()")
+```
+
+From above observations ,we can say,there is a impact on Youtube trending 
+videos views count over tag_appeared_in_title or not.
+
+```{r echo=FALSE}
+ggplot(aes(x=tag_appeared_in_title_count,fill=tag_appeared_in_title),
+       data=YtUsa)+
+  geom_histogram(binwidth = 1)+scale_x_continuous(breaks = seq(0,18,1))
+```
+
+Above plot showing an obvious point.
+If tag_appeared_in_title set to False, then tag_appeared_in_title_count 
+should be 0(since one variable derived from another).
+
+```{r echo=FALSE, message=FALSE,warning=FALSE, fig.width= 12,fig.height=8}
+plota <- ggplot(aes(x=trend.publish.diff+1,fill=factor(trend_day_count)),
+                data=YtUsa)+geom_histogram()+
+  scale_x_log10(breaks=c(1:7,14,90,30,365,1000,4215))+
+  labs(caption = "scale_x_log10()")+
+  ggtitle("Distribution of (trend.publish.diff+1) in log10 scale")
+
+plotb <- ggplot(aes(x=trend.publish.diff,fill=factor(trend_day_count)),
+                data=YtUsa)+geom_histogram(binwidth = 1)+
+  scale_x_continuous(limits =  c(0,30),breaks=seq(0,30,2))+
+  labs(caption = "binwidth=1")+
+  ggtitle("Distribution of trend.publish.diff")
+
+grid.arrange(plota,plotb,ncol=1)
+```
+
+For a trending Youtube video ,if difference between first trending date & 
+publish date is less than 4 days,then it would not be re-trended for more 
+than 3 times on Youtube.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(x=views),data=YtUsa)+geom_histogram()+scale_x_log10()+
+  facet_wrap(~comments_disabled)+
+  ggtitle("distribution of views in respect of comments_disabled or not")+
+  labs(caption = "scale_x_log10()")
+```
+
+```{r echo=FALSE}
+by(YtUsa$views,YtUsa$comments_disabled,summary)
+```
+
+Though, there are only 76 observations present ,out of 4547 for 
+comments_disabled = True.
+But still we can see there is a huge impact on Youtube trending videos views 
+count over comments_disabled or not.
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+ggplot(aes(x=likes/dislikes),data=subset(YtUsa,dislikes !=0))+
+  geom_histogram()+scale_x_continuous(limit=c(0,550),breaks=seq(0,550,50)) 
+```
+
+Looks like ratio of likes/dislikes is not uniformal for Youtube trending 
+videos.
+	
+```{r echo=FALSE}
+ggplot(aes(x=trend_tag_highest),data=subset(YtUsa,!is.na(tags)))+
+  geom_histogram(aes(fill=category_id),color="black",binwidth = 25)+
+  ggtitle("trend_tag_highest by category_id")
+```
+
+It is looks like, most frequently used tags on videos are attached from
+caterogoty_id 23 & 24
+
+```{r echo=FALSE ,fig.width=9,fig.height=6}
+ggplot(aes(x=trend_day_count,fill=subscriber_by_category),data=YtUsa)+
+  geom_histogram(binwidth = 1)+
+ggtitle("trend_day_count distribution with respect to subscriber_by_category")
+```
+
+Significant amount of videos are re-trended everyday from 
+subscriber_by_category: high & subscriber_by_category: medium group.
+
+```{r echo=FALSE}
+ggplot(aes(x=trend_day_count),data=YtUsa)+geom_histogram(binwidth = 1)+
+  facet_wrap(~tag_appeared_in_title)+
+ggtitle("trend_day_count distribution in respect of tag_appeared_in_title 
+or not")
+```
+```{r echo=FALSE}
+by(YtUsa$trend_day_count,YtUsa$tag_appeared_in_title,summary)
+```
+
+Looks like, number of days a video trended does not much affected by whether
+the tag appeared on the video title or not.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views,x=tags_count),data=subset(YtUsa,!is.na(tags)))+
+  geom_point()+geom_smooth()+scale_y_sqrt()+labs(caption="scale_y_sqrt()")+
+  ggtitle("views v/s tags_count")
+```
+
+```{r echo=FALSE}
+with(subset(YtUsa,!is.na(tags)),cor(views,tags_count))
+```
+
+By just observing number of tags(tags_count) attached on a trending video,
+we could not say how many views that video would get.
+
+```{r echo=FALSE, message=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(y=views,x=subscriber),
+  data=subset(YtUsa,!is.na(subscriber)))+geom_point()+geom_smooth()+
+  ggtitle("Views v/sSubscriber"))+
+  scale_x_continuous(breaks=seq(0,1000000000,5000000))
+```
+
+There are a good amount of outliers exist in the dataset. This outliers have 
+only few number of subscribers and yet they managed to get higher number of 
+views count.
+
+```{r echo=FALSE, message=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(y=views,x=subscriber),
+  data=subset(YtUsa,!is.na(subscriber)))+geom_point()+
+    coord_cartesian(xlim=c(quantile(subscriber,.025),
+                           quantile(subscriber,.975)),
+                    ylim=c(quantile(views,.025),quantile(views,.975)))+
+    geom_smooth(method="lm",color="red")+
+    geom_smooth()+
+  ggtitle("Views v/s Subscriber for 2-tailed 95% CI of both variables"))
+```
+
+By Applying geom_smooth() with & without linear method(lm), its look like 
+average count of views increasing as per average number of subscriber 
+increasing.
+Though relation is not strong.
+[please see - we observerd the data for 2-tailed 95% CI]
+
+```{r echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),cor(views,subscriber))
+```
+
+As like expected ,Correlation coefficient between views & subscriber is 0.27 .
+
+
+Now I am buiding a linear model for views v/s likes :
+
+```{r echo=FALSE}
+#Creating a model to predict views. This model will use 'likes' ,'dislikes',
+# 'comment_count', 'subscriber', 'trend_day_count', 'category_id' & other
+# variables those are derived from 'tag' variable. We know 'subscriber' & 
+# 'tags' variables have NA's. So at first we need to create a subset of the
+# dataset
+
+m1 <- lm(I(views) ~ I(likes), data = subset(YtUsa,!is.na(subscriber) & 
+                                              !is.na(tags)))
+m2 <- update(m1, ~ . + comment_count)
+m3 <- update(m2, ~ . + dislikes)
+m4 <- update(m3, ~ . + trend_day_count)
+m5 <- update(m4, ~ . + category_id)
+m6 <- update(m5, ~ . + tag_appeared_in_title)
+m7 <- update(m6, ~ . + subscriber)
+#mtable(m1, m2, m3, m4, m5,m6,m7,sdigits = 3)
+```
+
+
+```{r echo=FALSE}
+summary(m1)
+```
+
+For the linear model ,Multiple R-squared value between views & likes = 0.6816
+
+
+# Bivariate Analysis
+
+
+### Talk about some of the relationships you observed in this part of the
+# investigation.How did the feature(s) of interest vary with other features 
+# in the dataset?
+
+Youtube trending videos views counts strongly correlated with likes ,dislikes
+,comment_count.
+As the likes or dislikes or comment_count increases,views of a video also 
+increases. 
+The relationship between views count and likes or dislikes or comment_count 
+is almost linear.
+
+Linear Coefficient Correlation(method = pearson) between views & likes = 0.82
+
+Linear Coefficient Correlation(method = pearson) between views & dislikes = 
+0.53
+
+Linear Coefficient Correlation(method = pearson) between views & 
+comment_count = 0.57
+
+And rank Correlation(method = Spearman) between views & comment_count = 
+0.8252309
+
+Point to see, all above correlations are positive & strong.
+
+Linear Correlation coefficient(method = pearson) between views & subscriber
+= 0.27
+
+For tag_appeared_in_title: TRUE , median views count is 333984.
+For tag_appeared_in_title: FALSE , median views count is 247049.
+
+Median subscriber for subscriber_by_category: low = 599310 .
+Median subscriber for subscriber_by_category: medium = 1099202 .
+Median subscriber for subscriber_by_category: high = 1759496 .
+
+Most frequestly used tags on videos are attached from caterogoty_id 23 & 24.
+
+Based on the R^2 value,likes explains about 68 percent of the variance in 
+views.Other features of interest can be incorporated into the model to 
+explain the variance in the views.
+
+
+### Did you observe any interesting relationships between the other features
+# (not the main feature(s) of interest)?
+
+Yes,
+Pearson Coefficient Correlation(PCC) value between views & category_id 
+is -0.12,
+PCC between views & tag_appeared_in_title = 0.01,
+PCC between views & trend_tag_highest = -0.01,
+PCC between views & trend_tag_total = -0.02,
+PCC between views & trend_day_count = 0.19,
+PCC in between views & subscriber_by_category = 0.10 .
+
+1st Quantile, Median & 3rd Quantile views counts are highly affected by 
+the 'subscriber_by_category' feature.
+
+The relationship between views count and category_id or trend_tag_highest or 
+trend_day_count is monotonic.
+The relationship between views count and trend_tag_total is non linear.
+
+
+### What was the strongest relationship you found?
+
+Strongest relation between two feature in the dataset are views & likes.
+Coefficient Correlation between them : 0.82
+
+
+# Multivariate Plots Section
+
+
+```{r echo=FALSE, Multivariate_Plots}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+  y=views/trend_day_count,x=subscriber),data=subset(
+    YtUsa,!is.na(subscriber)))+
+  geom_point(alpha=0.2,position = "jitter",size=3)+
+  scale_y_sqrt(breaks=c(100000,1000000,10000000))+
+  scale_x_continuous(breaks=c(0,5000000,10000000,20000000,25000000))+
+  facet_wrap(~subscriber_by_category,ncol=1)+
+ggtitle("Views/day v/s Subscriber categorized by subscriber_by_category"))+
+  labs(caption="scale_y_sqrt()")
+```
+
+
+Trend showing ,variance of views per day is getting bigger for higher number
+of subscriber groups.
+
+```{r echo=FALSE}
+ggplot(aes(y=views,x=trend_day_count,color=tag_appeared_in_title),
+       data=YtUsa)+geom_point(position = "jitter",alpha=1)+
+  coord_cartesian(ylim=c(0,quantile(YtUsa$views,0.95)))+
+  ggtitle("top 95% views v/s trend_day_count by tag_appeared_in_title")
+```
+
+By just seeing how many times a video get appeared on the Youtube trend,we 
+can't imagine how many views a video can get,because variance of views for 
+each day is very big.So range is very bigger here.
+
+```{r echo=FALSE}
+ggplot(aes(y=views/trend_day_count,x=subscriber_by_category),data=YtUsa)+
+  geom_boxplot()+scale_y_log10(breaks=c(
+    1000,10000,36099,62628 ,107318,300000,1000000))+
+  labs(caption="scale_y_log10()")+
+  ggtitle("views per day v/s subscription wise categories")
+```
+
+```{r echo=FALSE}
+with(YtUsa,by(views/trend_day_count,subscriber_by_category,summary))
+```
+
+From above observation we can say subscriber_by_category: high got maximum 
+median views per day count(107318) 
+
+```{r echo=FALSE}
+ggplot(aes(y=views/trend_day_count,x=tag_appeared_in_title),data=YtUsa)+
+  geom_boxplot()+scale_y_log10(breaks=c(10000,50000,300000))+
+  labs(caption="scale_y_log10()")+
+  ggtitle("views per day on tag_appeared_in_title(FALSE or TRUE)")
+```
+
+```{r echo=FALSE}
+with(YtUsa,by(views/trend_day_count,tag_appeared_in_title,summary))
+```
+
+Median views per day count for tag_appeared_in_title : True is higher than
+the Median views per day count for tag_appeared_in_title : False
+
+
+```{r echo=FALSE}
+ggplot(aes(y=views/trend_day_count,x=comments_disabled),data=YtUsa)+
+  geom_boxplot()+scale_y_log10()+labs(caption="scale_y_log10()")+
+  ggtitle("views per day on comments_disabled(FALSE or TREU)")
+```
+
+```{r echo=FALSE}
+ggplot(aes(y=views/trend_day_count,x=ratings_disabled),data=YtUsa)+
+  geom_boxplot()+scale_y_log10()+labs(caption="scale_y_log10()")+
+  ggtitle("views per day on ratings_disabled(FALSE or TREU)")
+```
+
+On a trending video comments_disabled or ratings_disabled has an impact over 
+number of viewer per day.
+
+```{r echo=FALSE, message=FALSE}
+ggplot(aes(y=views/trend_day_count,x=trend_tag_highest),data=YtUsa)+
+  geom_point(alpha=.1)+scale_y_log10()+geom_smooth()+
+  labs(caption = "scale_y_log10()")+
+  ggtitle("views per day v/s trend_tag_highest")
+```
+
+```{r echo=FALSE}
+with(YtUsa,cor(views/trend_day_count,trend_tag_highest))
+```
+
+
+Correlation between (views/trend_day_count) & trend_tag_highest is 0.042,
+which is slightly better than the correlation between views & 
+trend_tag_highest(-0.013),which was calculated during Bivariate Plots Section
+
+
+```{r fig.width=12, fig.height=8,echo=FALSE}
+ggplot(aes(y=views,x=likes,color=trend_day_count),data=YtUsa)+
+  geom_point(alpha=.5,size=4,position = "jitter")+coord_cartesian(
+    xlim=c(0,quantile(YtUsa$likes,0.95)),
+    ylim=c(0,quantile(YtUsa$views,0.95)))+
+  ggtitle("top 95% of (views v/s likes) as per trend_day_count")
+```
+
+Above plot representing top 95% data of (views v/s likes) coloured by 
+different trend_day_count.
+
+```{r fig.width=12, fig.height=8,echo=FALSE}
+ggplot(aes(y=views,x=likes),data=YtUsa)+geom_point(
+  aes(color=subscriber_by_category),alpha=.25,size=6,shape=6)+
+  coord_cartesian(xlim=c(0,quantile(YtUsa$likes,0.95)),
+                  ylim=c(0,quantile(YtUsa$views,0.95)))+
+  ggtitle("top 95% of (views v/s likes) as per subscription category")
+```
+
+Above plot representing top 95% data of (views v/s likes) coloured by 3 
+different group of categories by subscription numbers.
+
+Across the plot We can see a clear dominance of group medium & high for high
+views count & high likes for Youtube trending videos.
+
+```{r echo=FALSE, fig.height=8,message=FALSE}
+ggplot(aes(y=views,x=trend.publish.diff),data=YtUsa)+
+  geom_point(position = "jitter",alpha=0.1,color="Orange")+coord_cartesian(
+    xlim=c(0,quantile(YtUsa$trend.publish.diff,0.95)))+scale_y_log10()+
+  geom_smooth()+facet_wrap(~tag_appeared_in_title)+
+  ggtitle("views v/s top 95% trend.publish.diff with respect of 
+tag_appeared_in_title or not")+labs(caption = "scale_y_log10()")
+```
+
+Above plot showing tag_appeared_in_title has an impact over views v/s top 95%
+of trend.publish.diff variables.
+
+```{r fig.width=12, fig.height=8,echo=FALSE}
+ggplot(aes(y=views,x=subscriber_by_category,color=trend_day_count),
+       data=YtUsa)+geom_jitter(alpha=.5,size=2)+coord_cartesian(ylim=c(
+         0,quantile(YtUsa$views,0.95)))+
+ggtitle("Top 95% views v/s subscriber_by_category colored by trend_day_count")
+```
+
+Above plot representing top 95% views v/s subscriber_by_category data 
+coloured by different trend_day_count.
+
+```{r fig.width=12, fig.height=8,echo=FALSE}
+ggplot(aes(y=views/trend_day_count,x=subscriber_by_category,
+           color=tag_appeared_in_title),data=YtUsa)+geom_jitter()+
+  coord_cartesian(ylim=c(0,quantile(YtUsa$views/YtUsa$trend_day_count,.95)))+
+ggtitle("Top 95% views per day subscription category wise & differentiate by
+tag_appeared_in_title or not")
+```
+
+Above plot representing top 95% views per day v/s subscriber_by_category 
+color differentiate by tag_appeared_in_title or not.
+
+Now I am plotting same plot,but instated of views per day, this time I am 
+using total views of a video.
+
+```{r fig.width=12, fig.height=8,echo=FALSE}
+ggplot(aes(y=views,x=subscriber_by_category,color=tag_appeared_in_title),
+       data=YtUsa)+geom_jitter()+coord_cartesian(
+         ylim=c(0,quantile(YtUsa$views,.95)))+
+ggtitle("Top 95% views subscription category wise differentiate by 
+tag_appeared_in_title or not")
+```
+
+Though last 2 plots looks similar.
+But take a close look on y-axis(views) scale value.Its scale value much more
+bigger than previous plot, because it represents total views of a video_id,
+not average views on a day.
+
+
+```{r fig.width=15, fig.height=9,echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+  y=views,x=subscriber,size=trend_day_count),data=subset(
+    YtUsa,!is.na(subscriber)))+geom_point(alpha=0.25,position = "jitter")+
+  scale_x_continuous(breaks=seq(0,30000000,2000000))+
+  scale_y_continuous(breaks=seq(0,150000000,10000000))+
+  ggtitle("Views v/s Subscriber size differentiate by trend_day_count"))
+```
+
+By taking a closer look on size of the bubble,we can observe,trending videos 
+those have listed for more than 5 times got the highest number of views.
+
+There are multiple number of outliers exist in the plot, many trending videos 
+got huge number of views ,but their subscriber counts are very less.
+Lets focus to 0 to 1000 subscriber and apply facet_wrap for comments_disabled
+& ratings_disabled variables.
+
+```{r fig.width=15, fig.height=9 ,echo=FALSE, warning=FALSE}
+plt5 <- with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+  y=views,x=subscriber),data=subset(YtUsa,!is.na(subscriber)))+
+  geom_point(alpha=0.25,position = "jitter")+
+ggtitle("Views v/s Subscriber differentiate by comments_disabled
+(False or True)")+facet_wrap(~comments_disabled)+scale_x_continuous(
+  limits = c(0,1000))+scale_y_continuous(limits = c(0,10000000)))
+
+plt6 <- with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+  y=views,x=subscriber),data=subset(YtUsa,!is.na(subscriber)))+
+  geom_point(alpha=0.25,position = "jitter")+
+ggtitle("Views v/s Subscriber differentiate by ratings_disabled
+(False or True)")+facet_wrap(~ratings_disabled)+scale_x_continuous(
+  limits = c(0,1000))+scale_y_continuous(limits = c(0,10000000)))
+
+grid.arrange(plt5,plt6,ncol=1)
+```
+
+So we can see, other than ratings_disabled & comments_disabled set to True 
+videos ,there are many other outliers present with subscriber = 0 with huge 
+number of views.
+I don't know, the real reason behind this.It might be there are some lurking
+variables, which might be causing this issue.
+
+```{r fig.width=12, fig.height=8, echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+  y=views,x=subscriber),data=subset(YtUsa,!is.na(subscriber)))+
+  geom_point(alpha=0.2,position = "jitter",color="deeppink")+
+    coord_cartesian(xlim=c(quantile(subscriber,.025),quantile(
+      subscriber,.975)),ylim=c(quantile(views,.025),quantile(views,.975)))+
+    facet_wrap(~tag_appeared_in_title)+
+ggtitle("2-Tailed 95% CI (Views v/s Subscriber) differentiate by 
+tag_appeared_in_title(False or True)")+geom_smooth(method="lm",color="red")) 
+```
+
+```{r echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber) & tag_appeared_in_title),cor(
+  views,subscriber))
+```
+
+PCC between views & subscriber with respect of tag_appeared_in_title : True 
+= 0.27
+
+```{r echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber) & !tag_appeared_in_title),cor(
+  views,subscriber))
+```
+
+PCC between views & subscriber with respect of tag_appeared_in_title : False
+= 0.24 .
+
+From the last plot & above observations ,it could be said ,that correlation 
+between views & subscriber when tag appeared in the title is more stronger 
+than when tag does not appear in the title.
+
+On other words, if a trending video title does not contain any tag of it,then
+its number of subscriber & views counts might also get affected(lower).
+
+
+```{r fig.width=15, fig.height=9 ,echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+y=views/trend_day_count,x=subscriber,color=category_id,size=trend_day_count),
+data=subset(YtUsa,!is.na(subscriber)))+
+  geom_point(alpha=0.25,position = "jitter")+
+  coord_cartesian(xlim = c(quantile(subscriber,.025),quantile(
+    subscriber,.975)),ylim =c(quantile(views/trend_day_count,.025),quantile(
+      views/trend_day_count,.975)))+
+ggtitle("2-Tailed 95% CI (Views per day v/s Subscriber) categorized & colored
+by category_id and differentiate by tag_appeared_in_title(False or True) and
+sized by trend_day_count")+
+  ylab("views per day")+facet_wrap(category_id~tag_appeared_in_title)) 
+```
+
+From the above plot(I considered 2-tailed 95% CI) we can see ,there are few 
+categories where variance of views per day & subscribe are very big.
+Categories are : 10,23,24.
+
+Also we can say,the video channel, which had the highest level of subscribers
+for Youtube trending videos, is belongs to category_id: 23
+
+```{r fig.width=15, fig.height=9, echo=FALSE}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(
+ y=views,x=subscriber,size=trend_day_count)
+ ,data=subset(YtUsa,!is.na(subscriber)))+
+   geom_point(alpha=0.25,position = "jitter",color="navyblue")+
+  coord_cartesian(xlim = c(quantile(subscriber,.025),quantile(
+    subscriber,.975)),ylim =c(quantile(views,.025),quantile(
+    views,.975)))+
+ggtitle("2-Tailed 95% CI (Views v/s Subscriber) categorized by 
+subscriber_by_category and differentiate by tag_appeared_in_title
+(False or True) and sized by trend_day_count")+
+  facet_wrap(subscriber_by_category~tag_appeared_in_title,ncol=2))
+```
+
+From the above plot(I considered 2-tailed 95% CI) we can say,video belongs to 
+categories where they have highest level of subscribers;those videos are 
+using at least one of its tag on the trending video title.
+
+
+Lest's print out the model table :-
+
+```{r echo=FALSE}
+mtable(m1, m2, m3, m4, m5,m6,m7, sdigits = 3)
+```
+
+
+Now summary of final model :-
+
+```{r echo=FALSE}
+summary(m7)
+```
+
+R^2 value of the final model collectively explains only about 79 percent of 
+the variance in views.
+Residual standard error: 2112000 on 4301 degrees of freedom.
+
+
+# Multivariate Analysis
+
+### Talk about some of the relationships you observed in this part of the 
+# investigation. Were there features that strengthened each other in terms 
+# of looking at your feature(s) of interest?
+
+I observed,by just seeing how many times a video get appeared on the Youtube 
+trend,we can't imagine how many views a video can get,because variance of 
+views for each day is very big.
+
+Median views per day for subscriber_by_category: low = 36099 .
+Median views per day for subscriber_by_category: medium = 62628 .
+Median views per day for subscriber_by_category: high = 107318 .
+
+Median views per day count for tag_appeared_in_title : True is 82070 .
+Median views per day count for tag_appeared_in_title : False is 55604 .
+
+Video channel which had the highest level of subscribers for Youtube trending
+videos,belongs to category_id = 23 .
+
+From top 95% data points of views per day & subscriber,we observed there are
+few categories where variance of views & subscribe are very big. 
+Categories are : 10,23,24 .
+
+From plots,I saw many of videos have only 0 like, but have higher number of 
+views.
+And many of videos have zero(0) subscriber,but still get to manage higher 
+number of viewers; those are probably the outlier of the dataset.
+To filter them,I focused on 0 to 1000 subscriber and apply facet_wrap for 
+comments_disabled & ratings_disabled variables.
+But surprisingly,comments_disabled=TRUE & ratings_disabled=TRUE ,could not be
+able to filter out all of the outliers.
+There must be something else going on ,may be some lurking variables causing
+this nature.
+
+Trending videos those have listed for more than 5 times(or days), got 
+the highest number of views count.
+Pearson Coefficient Correlation(PCC) between views & subscriber is more 
+stronger when one of its tag appeared in the title.
+Variance of views per day is getting bigger for higher number of subscriber
+groups(low < medium < high for subscriber_by_category).
+
+### Were there any interesting or surprising interactions between features?
+
+Yes,
+Many of the trending videos have lower number of subscriber & yet they 
+managed to get more number of viewers than top subscriber channels.
+Also I saw there are many trending videos managed to get higher number of 
+views counts,but they have very few likes, many of them have 0 like only,
+I think some of 0 like videos came from videos where ratings_disabled set 
+to True.
+
+### OPTIONAL: Did you create any models with your dataset? 
+# Discuss the strengths and limitations of your model.
+
+Yes,
+For the final model(m9) ,I got Multiple R-squared:  0.7902 & Residual 
+standard error: 2112000 .
+So R^2 value of the final model collectively explains only about 79 percent 
+of the variance in views.
+Also its Residual standard error is very big here & that would cause a large 
+range of Confidence Interval for predictive model. 
+In other words standard error is bigger for the final model.
+Therefore this model would not be able to calculate/predict views counts 
+accurately.
+
+The model I am looking for, not just for predicting views count of a trending
+video;I want to flag a video, if its fall behind 95% CI.
+
+------
+
+# Final Plots and Summary
+
+### Plot One
+```{r echo=FALSE, Plot_One}
+ggplot(aes(x=trend_day_count),data=YtUsa)+geom_histogram(
+  binwidth =1,color="black",fill="white")+
+  scale_x_continuous(breaks=seq(1,15,1))+
+  scale_y_continuous(breaks=seq(0,700,100))+
+  xlab("No. of days or times a video trended")+ylab("Frequency")+
+labs(caption="105 days of Youtube Trending videos for 4547 unique video id's")+
+  ggtitle("Distribution of 'trend_day_count' variable")
+```
+
+### Description One
+
+From the above plot, we can analyze that no video trended over 14-day period.
+We can see there are more than 600 videos those were appeared in the Youtube
+trending video list for only once(that was the first & last time). 
+
+
+### Plot Two
+```{r echo=FALSE,message=FALSE, fig.width=8, fig.height=5, Plot_Two}
+ggplot(aes(y=views,x=likes+1),data=YtUsa)+
+  geom_jitter(alpha=0.1,size=2,color="orange")+
+  scale_x_log10(breaks=c(1,100,1000,10000,100000,1000000))+scale_y_log10(
+    breaks=c(1,1000,5000,10000,50000,100000,500000,1000000,5000000,10000000,
+             50000000,100000000))+
+  xlab("No. of likes received + 1")+ylab("No. of viewers watched")+
+  labs(caption="Youtube Trending videos for 4547 unique video id's")+
+ggtitle("Views v/s (Likes+1) with log10 transformation for both axes 
++ smoother lines")+
+  geom_smooth()+geom_smooth(method="lm",color="red")
+```
+
+
+### Description Two
+
+Since log10 applied on the x-axis & and there are few videos in Youtube 
+trending list with 0 likes, because of this, we have to pass the 
+variable (likes+1) instead of likes into the scale_x_log10() function.
+That would help to overcome infinite values(since log10(0) = Inf).
+Therefore on the above plot, on x-axis, x=1 represents 0 like and x=100 
+represents 99 likes and so on.
+
+I have applied two smoother lines on the above plot ,one with linear method
+(red line) & another without linear method(blue line).
+Here smoother line(Slope Of Regression Line) represents the slope of the line
+of best fit in the scatterplot.
+Since there is very strong relationship between views & likes attribute 
+(cor=0.82),hence the slope of the linear line nearer to 1. 
+
+We can see there are many outliers exist on y-axis for x = 1 .
+Many of those video authors might disable video rating ,so users are not able
+to like or dislike the video.
+Those outliers causing non-linear regression line to start from (x=1,y=10000).
+
+
+### Plot Three
+```{r echo=FALSE,fig.width=15, fig.height=9, message=FALSE,Plot_Three}
+with(subset(YtUsa,!is.na(subscriber)),ggplot(aes(y=views,x=subscriber),
+  data=subset(YtUsa,!is.na(subscriber)))+geom_point(aes(
+    size=trend_day_count),alpha=0.25,position = "jitter",color="navyblue")+
+  coord_cartesian(xlim = c(quantile(subscriber,.025),quantile(
+    subscriber,.975)),ylim =c(quantile(views,.025),quantile(views,.975)))+
+  scale_x_continuous(breaks=c(0,2000000,7000000,10000000,15000000,17000000))+
+  scale_y_continuous(breaks=c(0,2000000,6000000,8000000))+
+ggtitle("2-Tailed 95% CI (Views v/s Subscriber) categorized by 
+subscriber_by_category and differentiate by tag_appeared_in_title
+(False or True) and sized by trend_day_count")+
+xlab("No. of subscriber of the video channel")+ylab("No. of viewers watched")+
+  labs(caption="Youtube Trending videos for 4547 unique video id's")+
+  facet_wrap(subscriber_by_category~tag_appeared_in_title,ncol=2)+
+  geom_smooth(method="lm",color="red")+geom_smooth())
+```
+
+### Description Three
+
+Notice - I took the subset of the dataset to filter out subscriber with NA.
+
+After considering only top 95% viewers & subscribers, we can see ,under any 
+group, trending videos those have not included any of its tag on the video 
+title,tend to have lower number of subscriber & viewers, than videos those 
+have included one(at least).
+
+Trending Videos under subscriber_by_category: high & subscriber_by_category:
+medium were able to achieve highest level of views in Youtube.
+
+From bubble size ,we can say ,trending Videos those have trended for more 
+than 3 to 4 times(or days),were able to achieve highest level of viewers 
+in Youtybe.
+
+From linear regression line ,we can say,other than videos under 
+subscriber_by_category: low,as per average number of subscriber increases,
+average number of viewers also increases.
+
+
+------
+
+# Reflection
+
+
+The Youtube Trending data set contains information on almost 4,600 unique 
+videos across 23 variables.And it is recorded for total 105 days.
+[I have a created a categorical variable extra though.]
+
+I started by understanding the individual variables in the data set, and then
+I explored interesting questions and leads as I continued to make 
+observations on plots.
+Eventually, I explored the views of videos across many variables.
+Views count of a video strongly correlated with likes,dislikes,comment_count.
+Highest correlation exist between views & likes variables,where cor=0.82 .
+But there exist some other important features :subscriber,trend_day_count,
+category_id; they have good correlation values.
+That's why I include all of the above features to build predictive model.
+Model was able to account for only 79% of the variance in the dataset.
+Also model Residual standard error was big.So model would not be very useful
+to predict views count accurately for a Youtube trending video.
+
+Right now,I might be unable to build a good predictive model,but I found some
+interesting facts about Youtube trending videos; these are:-
+84% or more trending videos are using one of its tag on the video title for 
+at least once.
+Other than 604 trending videos,all trending videos are appeared in the 
+trending list for more than 1 once.
+Maximum number of Youtube videos are listed on trending, within 0 to 14 days
+of the video publishing date.
+More users engaged in conversation when they were disliking a trending video
+rather than liking a trending video.
+If difference between first trending date & publish date is less than 4 days,
+then there is a big chance,that video would not be re-trended for more than 
+3 times.
+There is a impact on Youtube trending videos views count over 
+tag_appeared_in_title or not.
+Trending videos those have listed for more than 5 times got the highest 
+number of views.
+Videos belongs to categories where number of subscriber is/are most ;those 
+videos are using at least one of its tag on the trending video title.
+
+
+Struggle:-
+
+I struggled to create these two variables : trend_tag_highest, 
+trend_tag_total .
+
+I failed to create these two variables from the dataset directly;it might 
+happen,since I was new in R-Programming.
+
+But some how,by creating a separate(temporary) dataframe from 'tags' variable
+and by using that temporary dataframe,I succeed to create those new 
+variables: trend_tag_highest, trend_tag_total .
+Trick behind this was to create a similar data structure of Python dictionary
+in R-Programming.
+Though I believe there should be some easy technique to achieve the same goal.
+
+
+Surprise:-
+
+Many of Youube trending videos get listed on trending list for more than 1 
+time(or day), but they did not get higher number of traffics.
+
+Another point I already discussed,many of the trending videos have lower
+number of subscriber(some of them have 0) & yet they managed to get greater
+number of viewers than top subscriber channels present in the Youtube.
+Also I saw there are many trending videos managed to get higher number of 
+views counts,but they have very few likes(many of them have 0).
+
+
+Future work :-
+
+In future we could use a OCR(Optical character recognition) technique to scan 
+the thumbnail image to observe whether the thumbnail using any text or not.
+
+We can make a new variable called 'tag_appeared_in_description' with the help
+of 'tags' & 'description' variables,it would be very similar to the variable 
+already exist: 'tag_appeared_in_title' .
+With similar approach, we can make another variable called 
+'title_appeared_in_desccription' with the help of 'title' & 'description' 
+variables.
+
+We can create some bucket variables(using cut function) for 
+'last_tredning_date' and 'tags_count' variable to make really use of those 
+2 features. 
+
+We can do some element grouping,that might help to extract some hidden 
+information from the data.
+
+
+Limitation of the dataset:-
+
+There exist a latency(time delay) in the dataset,happened due to scrapping 
+the subscriber column data separately(Subscriber data did not come with the 
+original dataset,so it is recorded during different time).
+
+
+Possible Lurking Variables :-
+
+There are some lurking variables those could affect the main features of the
+dataset(views,likes,dislikes,comment_count,subscriber).For example what is 
+the content of the video thumbnail,which is used in the trending video.A auto
+generated thumbnail(by Youtube system) might cause lower number of views,
+likes,etc.While on the other hand, if a trending video using a custom 
+thumbnail or a thumbnail which was manually uploaded by the author.And if its
+containing a perfect image or a text that could provoke viewers to click and 
+check the video(in other word Clickbait),that would affect the trending 
+statistic easily. 
+
+Alternatively, if a trending video containing a content which was the trend 
+of the day on the Internet,then it could easily get more attention than 
+any other trending videos irrespective of how many subscriber the video 
+channel had.
+
+Another thing,video might not well presented,either its graphics or sound 
+quality was poor or presentation was poor.
+
+It is also possible that some dishonest users are using some blackhat 
+technique to bypass Youtube trending algorithm.And still yet Youtube 
+algorithms did not flag it.
+
+
